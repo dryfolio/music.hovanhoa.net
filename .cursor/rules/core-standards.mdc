@@ -1,0 +1,34 @@
+---
+description: Core agent architecture and workflow standards for this repo
+alwaysApply: true
+---
+
+# Agent Architecture & Workflow
+
+- Use a looped workflow: browse or research ➝ update configuration ➝ implement code ➝ run tests, and repeat on failure.
+- Prefer a **central Core class** that orchestrates logic, consuming configuration and prompts rather than hardcoding them.
+- Keep helper utilities isolated in dedicated modules (e.g., OS, terminal, I/O helpers).
+
+# Static Configuration Pattern
+
+- Store prompts, environment flags, and static settings in dedicated configuration modules or classes (e.g., `Config`, `Prompts`, `Settings`).
+- Access configuration **indirectly** via configuration objects (e.g., `Config.Prompts.SYSTEM`) instead of hardcoded strings in logic.
+- Allow external tools or research scripts to safely update configuration files when upstream APIs or docs change.
+
+# Testing & Feedback Loop
+
+- Use an automated **test loop**: run tests; on failure, perform focused research; update configuration or logic; re-run tests.
+- Prioritize fast, repeatable test commands (e.g., `pytest`, `npm test`, `pnpm test`, or equivalent for this repo).
+- When tests fail due to upstream or API changes, prefer updating configuration and prompts first, then code.
+
+# Design Constraints
+
+- **Strict separation of concerns**: business logic should not directly embed environment-dependent strings (API keys, URLs, prompts, etc.).
+- **Isolation**: prefer project-local environments and dependencies (e.g., virtualenvs or project-local Node dependencies) over global installs.
+- **Clean code**: use small, focused helper functions or utilities for system and terminal interactions rather than inlining shell calls throughout the codebase.
+
+# Usage Notes for Agents
+
+- Treat configuration modules as the primary source of truth for prompts and environment settings.
+- When behavior seems out-of-date with external docs or APIs, consider proposing updates to configuration/prompt files before large refactors.
+
