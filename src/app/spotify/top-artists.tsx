@@ -45,7 +45,7 @@ export async function TopArtists() {
                                     >
                                         <path d="M8 9a3 3 0 100-6 3 3 0 000 6zM8 11a6 6 0 016 6H2a6 6 0 016-6z" />
                                     </svg>
-                                    <span>{artist.followers.total.toLocaleString()}</span>
+                                    <span>{artist.followers?.total?.toLocaleString() ?? 0}</span>
                                 </div>
                                 <div className="flex items-center gap-1">
                                     <svg
