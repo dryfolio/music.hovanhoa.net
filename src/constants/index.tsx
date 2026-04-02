@@ -6,6 +6,7 @@ const LINKEDIN = 'hovanhoa'
 const GITHUB = 'hovanhoa'
 const IMAGE = '/avatar.png'
 const MUSIC_URL = 'https://music.hovanhoa.net'
+const SPOTIFY_PROFILE_URL = 'https://open.spotify.com/user/31hrewf6b5arny7zcys55uevsqoq'
 const INSIGHT_URL = 'https://insight.hovanhoa.net'
 const GALLERY_URL = 'https://gallery.hovanhoa.net'
 const ROLE = 'Software Engineer'
@@ -18,6 +19,7 @@ export {
     GITHUB,
     IMAGE,
     MUSIC_URL,
+    SPOTIFY_PROFILE_URL,
     INSIGHT_URL,
     GALLERY_URL,
     BASE_URL,
