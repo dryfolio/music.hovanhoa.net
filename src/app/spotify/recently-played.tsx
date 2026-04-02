@@ -11,7 +11,7 @@ export async function RecentlyPlayed() {
 
     return (
         <div>
-            <h2 className="text-xs tracking-widest mb-4">
+            <h2 className="text-slate-500 leading-relaxed max-w-2xl text-base sm:text-lg">
                 recently played
             </h2>
             <div className="space-y-2">

@@ -10,7 +10,7 @@ export async function TopArtists() {
 
     return (
         <div>
-            <h2 className="text-xs tracking-widest mb-4">
+            <h2 className="text-slate-500 leading-relaxed max-w-2xl text-base sm:text-lg">
                 top artists
             </h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
