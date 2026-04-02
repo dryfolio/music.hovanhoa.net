@@ -93,6 +93,7 @@ rl.question('Redirect URL: ', async (redirectUrl) => {
         process.exit(1)
     }
 
+    console.log(data)
     console.log('\nAdd this to your .env:\n')
     console.log(`SPOTIFY_REFRESH_TOKEN=${data.refresh_token}`)
     console.log(`\nAccess token expires in ${data.expires_in} seconds.\n`)

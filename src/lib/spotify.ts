@@ -1,27 +1,85 @@
+import { readFileSync, writeFileSync } from 'fs'
+import { resolve } from 'path'
+
 const NOW_PLAYING_ENDPOINT = `https://api.spotify.com/v1/me/player/currently-playing`
 const TOP_TRACKS_ENDPOINT = `https://api.spotify.com/v1/me/top/tracks?time_range=short_term&limit=25`
 const TOP_ARTISTS_ENDPOINT = `https://api.spotify.com/v1/me/top/artists?time_range=short_term&limit=24`
 const RECENTLY_PLAYED_ENDPOINT = `https://api.spotify.com/v1/me/player/recently-played?limit=5`
 const TOKEN_ENDPOINT = `https://accounts.spotify.com/api/token`
 
-const getAccessToken = async () => {
+// In-memory cache: one token refresh per process lifetime (until expiry)
+let cachedToken: { accessToken: string; expiresAt: number } | null = null
+let refreshLock: Promise<{ accessToken: string; expiresAt: number }> | null = null
+
+const persistRefreshToken = (newToken: string) => {
+    try {
+        // Write to a separate file to avoid triggering Next.js .env hot-reload
+        const tokenPath = resolve(process.cwd(), '.spotify-refresh-token')
+        writeFileSync(tokenPath, newToken)
+        console.log('[Spotify] Refresh token rotated and persisted')
+    } catch (e) {
+        console.error('[Spotify] Failed to persist refresh token:', e)
+    }
+}
+
+const getStoredRefreshToken = (): string | null => {
+    try {
+        const tokenPath = resolve(process.cwd(), '.spotify-refresh-token')
+        return readFileSync(tokenPath, 'utf8').trim()
+    } catch {
+        return null
+    }
+}
+
+const doRefresh = async (): Promise<{ accessToken: string; expiresAt: number }> => {
     const basic = Buffer.from(
         `${process.env.SPOTIFY_CLIENT_ID}:${process.env.SPOTIFY_CLIENT_SECRET}`
     ).toString('base64')
-    const body = new URLSearchParams()
-    body.append('grant_type', 'refresh_token')
-    body.append('refresh_token', process.env.SPOTIFY_REFRESH_TOKEN ?? '')
     const response = await fetch(TOKEN_ENDPOINT, {
         method: 'POST',
         headers: {
             Authorization: `Basic ${basic}`,
             'Content-Type': 'application/x-www-form-urlencoded',
         },
-        body: body,
+        body: new URLSearchParams({
+            grant_type: 'refresh_token',
+            refresh_token: process.env.SPOTIFY_REFRESH_TOKEN ?? getStoredRefreshToken() ?? '',
+        }),
     })
     const result = await response.json()
     console.log('[Spotify] Token response:', result)
-    return result
+    if (result.error) {
+        console.error('[Spotify] Token error:', result.error_description)
+        throw new Error(result.error_description)
+    }
+    if (result.refresh_token) {
+        persistRefreshToken(result.refresh_token)
+    }
+    // Cache with a 60s buffer before actual expiry
+    const expiresAt = Date.now() + (result.expires_in - 60) * 1000
+    return { accessToken: result.access_token, expiresAt }
+}
+
+const getAccessToken = async (): Promise<string> => {
+    // Return cached token if still valid (with 60s buffer)
+    if (cachedToken && Date.now() < cachedToken.expiresAt) {
+        return cachedToken.accessToken
+    }
+
+    // If a refresh is already in progress, wait for it
+    if (refreshLock) {
+        const result = await refreshLock
+        return result.accessToken
+    }
+
+    // Start a new refresh
+    refreshLock = doRefresh()
+    try {
+        cachedToken = await refreshLock
+        return cachedToken!.accessToken
+    } finally {
+        refreshLock = null
+    }
 }
 
 type NowPlayingTrue = {
@@ -40,7 +98,7 @@ type NowPlayingFalse = {
 export type NowPlaying = NowPlayingTrue | NowPlayingFalse
 
 const getNowPlaying = async (): Promise<NowPlaying> => {
-    const { access_token } = await getAccessToken()
+    const access_token = await getAccessToken()
 
     const res = await fetch(NOW_PLAYING_ENDPOINT, {
         headers: {
@@ -103,7 +161,7 @@ export interface TopTrack {
 }
 
 const getTopTracks = async (): Promise<TopTrack[]> => {
-    const { access_token } = await getAccessToken()
+    const access_token = await getAccessToken()
 
     const res1 = await fetch(TOP_TRACKS_ENDPOINT, {
         headers: {
@@ -163,7 +221,7 @@ export interface RecentlyPlayedTrack {
 }
 
 const getRecentlyPlayed = async (): Promise<RecentlyPlayedTrack[]> => {
-    const { access_token } = await getAccessToken()
+    const access_token = await getAccessToken()
     const response = await fetch(RECENTLY_PLAYED_ENDPOINT, {
         headers: {
             Authorization: `Bearer ${access_token}`,
@@ -216,7 +274,7 @@ export interface TopArtist {
 }
 
 const getTopArtists = async (): Promise<TopArtist[]> => {
-    const { access_token } = await getAccessToken()
+    const access_token = await getAccessToken()
 
     const res2 = await fetch(TOP_ARTISTS_ENDPOINT, {
         headers: {
