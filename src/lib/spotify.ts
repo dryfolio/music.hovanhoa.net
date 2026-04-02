@@ -11,7 +11,7 @@ const TOKEN_ENDPOINT = `https://accounts.spotify.com/api/token`
 // In-memory cache: one token refresh per process lifetime (until expiry)
 let cachedToken: { accessToken: string; expiresAt: number } | null = null
 let refreshLock: Promise<{ accessToken: string; expiresAt: number }> | null = null
-const TOKEN_PATH = resolve(process.cwd(), '.spotify-refresh-token')
+const TOKEN_PATH = resolve('/tmp', '.spotify-refresh-token')
 
 const persistRefreshToken = (newToken: string) => {
     try {
