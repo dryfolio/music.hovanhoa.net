@@ -23,6 +23,10 @@ const persistRefreshToken = (newToken: string) => {
     }
 }
 
+// Live refresh token — updated after each successful rotation so concurrent requests use the latest.
+// Initialized from env; the retry path can overwrite it from the /tmp file.
+let liveRefreshToken: string = process.env.SPOTIFY_REFRESH_TOKEN ?? ''
+
 const getStoredRefreshToken = (): string | null => {
     try {
         return readFileSync(TOKEN_PATH, 'utf8').trim() || null
@@ -30,15 +34,6 @@ const getStoredRefreshToken = (): string | null => {
         return null
     }
 }
-
-// Get the current refresh token — persisted file wins because it holds the latest
-// rotated token; env is only the initial seed (also survives Next.js hot-reloads).
-const getRefreshToken = (): string => {
-    return getStoredRefreshToken() ?? process.env.SPOTIFY_REFRESH_TOKEN ?? ''
-}
-
-// Live refresh token — updated after each successful rotation so concurrent requests use the latest
-let liveRefreshToken: string = getRefreshToken()
 
 const doRefresh = async (): Promise<{ accessToken: string; expiresAt: number }> => {
     const basic = Buffer.from(
@@ -82,34 +77,28 @@ const getAccessToken = async (): Promise<string> => {
         return result.accessToken
     }
 
-    const attemptRefresh = async (
-        retryFromFile: boolean
-    ): Promise<{ accessToken: string; expiresAt: number }> => {
-        if (retryFromFile) {
-            // A concurrent request may have already rotated the token — reload from file.
-            const stored = getStoredRefreshToken() ?? ''
-            liveRefreshToken = stored
-        }
-        return doRefresh()
-    }
-
     // Start a new refresh
-    refreshLock = attemptRefresh(false)
+    refreshLock = doRefresh()
     try {
         cachedToken = await refreshLock
         return cachedToken!.accessToken
     } catch (err) {
-        // Token was revoked (rotated by a concurrent request). Reload from persisted
-        // file and retry once — the new token should work.
+        // Token was revoked (rotated by a concurrent request). The winner's new
+        // refresh token is in env (shared across all Lambdas). Retry with that.
         cachedToken = null
-        const stored = getStoredRefreshToken() ?? ''
-        if (stored) {
-            refreshLock = attemptRefresh(true)
+        liveRefreshToken = process.env.SPOTIFY_REFRESH_TOKEN ?? ''
+        // Also check /tmp — the winner may have persisted there.
+        const stored = getStoredRefreshToken()
+        if (stored) liveRefreshToken = stored
+        if (liveRefreshToken) {
+            // Small delay to let the winning Lambda finish persisting.
+            await new Promise((resolve) => setTimeout(resolve, 200))
+            refreshLock = doRefresh()
             try {
                 cachedToken = await refreshLock
                 return cachedToken!.accessToken
             } catch {
-                // Stale file too — fall through to throw
+                // Give up — throw original error
             }
         }
         throw err
