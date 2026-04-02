@@ -10,8 +10,8 @@ export async function TopArtists() {
 
     return (
         <div>
-            <h2 className="text-sm font-mono text-black-500 tracking-wider mb-4">
-                Top Artists
+            <h2 className="text-xs tracking-widest mb-4">
+                top artists
             </h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                 {artists.map((artist: TopArtist) => (

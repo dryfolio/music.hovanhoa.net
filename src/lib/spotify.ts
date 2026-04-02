@@ -5,6 +5,7 @@ const NOW_PLAYING_ENDPOINT = `https://api.spotify.com/v1/me/player/currently-pla
 const TOP_TRACKS_ENDPOINT = `https://api.spotify.com/v1/me/top/tracks?time_range=short_term&limit=25`
 const TOP_ARTISTS_ENDPOINT = `https://api.spotify.com/v1/me/top/artists?time_range=short_term&limit=24`
 const RECENTLY_PLAYED_ENDPOINT = `https://api.spotify.com/v1/me/player/recently-played?limit=5`
+const PROFILE_ENDPOINT = `https://api.spotify.com/v1/me`
 const TOKEN_ENDPOINT = `https://accounts.spotify.com/api/token`
 
 // In-memory cache: one token refresh per process lifetime (until expiry)
@@ -111,6 +112,29 @@ type NowPlayingFalse = {
 }
 
 export type NowPlaying = NowPlayingTrue | NowPlayingFalse
+
+export interface SpotifyProfile {
+    id: string
+    display_name: string
+    images: { url: string }[]
+    external_urls: { spotify: string }
+    followers: { total: number }
+}
+
+const getProfile = async (): Promise<SpotifyProfile | null> => {
+    try {
+        const access_token = await getAccessToken()
+        const res = await fetch(PROFILE_ENDPOINT, {
+            headers: {
+                Authorization: `Bearer ${access_token}`,
+            },
+        })
+        if (!res.ok) return null
+        return res.json()
+    } catch {
+        return null
+    }
+}
 
 const getNowPlaying = async (): Promise<NowPlaying> => {
     const access_token = await getAccessToken()
@@ -323,4 +347,4 @@ const getTopArtists = async (): Promise<TopArtist[]> => {
     return artists
 }
 
-export { getNowPlaying, getTopTracks, getRecentlyPlayed, getTopArtists }
+export { getNowPlaying, getTopTracks, getRecentlyPlayed, getTopArtists, getProfile }

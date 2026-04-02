@@ -3,11 +3,12 @@ import { Footer } from '@/components/footer'
 import { Metadata } from 'next'
 import Link from 'next/link'
 import Image from 'next/image'
-import { BASE_URL, NAME, FULL_NAME, ROLE, TWITTER, IMAGE as AVATAR } from '@/constants'
+import { BASE_URL, NAME, FULL_NAME, ROLE, TWITTER, IMAGE as AVATAR, SPOTIFY_PROFILE_URL } from '@/constants'
 import { Suspense } from 'react'
 import { RecentlyPlayed } from './spotify/recently-played'
 import { TopTracks } from './spotify/top-tracks'
 import { TopArtists } from './spotify/top-artists'
+import { Profile } from './spotify/profile'
 import { SkeletonCard } from '../components/skeleton-card'
 
 export const metadata: Metadata = {
@@ -65,31 +66,33 @@ export default async function Music() {
                     </Link>
                     <Navbar />
                 </div>
-                <div className="mt-12 sm:mt-20 space-y-6 sm:space-y-8">
-                    {/* <div className="mb-6">
-                        <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-slate-800 mb-2">
-                            My music library
+                <div className="mt-12 sm:mt-20 space-y-8 sm:space-y-10">
+                    <div className="mb-2">
+                        <h1 className="text-4xl sm:text-3xl font-bold tracking-tight text-slate-900 mb-3">
+                            my music library
                         </h1>
-                        <p className="text-slate-500 leading-relaxed max-w-2xl">
-                            A collection of what I&apos;ve listened to over the past 4 weeks,
-                            automatically generated from my{' '}
+                        <p className="text-slate-500 leading-relaxed max-w-2xl text-base sm:text-lg">
+                            what i&apos;ve been listening to, powered by{' '}
                             <a
-                                href="https://open.spotify.com"
+                                href={SPOTIFY_PROFILE_URL}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="text-emerald-500 hover:text-emerald-600 transition-colors"
+                                className="text-emerald-500 hover:text-emerald-600 transition-colors font-medium"
                             >
-                                Spotify profile
+                                spotify
                             </a>
                             .
                         </p>
-                        <blockquote className="border-l-2 border-slate-300 pl-4 mt-4">
+                        {/* <blockquote className="mt-6 pl-4 border-l border-slate-300">
                             <p className="text-slate-400 italic text-sm sm:text-base leading-relaxed max-w-2xl">
                                 &ldquo;Music is that voice that tells us that the human race is greater than it knows.&rdquo;
-                                <span className="not-italic text-slate-500"> — Napoleon Bonaparte</span>
+                                <span className="not-italic text-slate-400 font-normal"> — Napoleon Bonaparte</span>
                             </p>
-                        </blockquote>
-                    </div> */}
+                        </blockquote> */}
+                    </div>
+                    <Suspense fallback={<SkeletonCard />}>
+                        <Profile />
+                    </Suspense>
                     <Suspense fallback={<SkeletonCard />}>
                         <RecentlyPlayed />
                     </Suspense>
