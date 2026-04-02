@@ -82,16 +82,36 @@ const getAccessToken = async (): Promise<string> => {
         return result.accessToken
     }
 
+    const attemptRefresh = async (
+        retryFromFile: boolean
+    ): Promise<{ accessToken: string; expiresAt: number }> => {
+        if (retryFromFile) {
+            // A concurrent request may have already rotated the token — reload from file.
+            const stored = getStoredRefreshToken() ?? ''
+            liveRefreshToken = stored
+        }
+        return doRefresh()
+    }
+
     // Start a new refresh
-    refreshLock = doRefresh()
+    refreshLock = attemptRefresh(false)
     try {
         cachedToken = await refreshLock
         return cachedToken!.accessToken
     } catch (err) {
-        // Token was revoked (e.g. rotated by another concurrent request).
-        // Invalidate cached state and reload from persisted file for the next retry.
+        // Token was revoked (rotated by a concurrent request). Reload from persisted
+        // file and retry once — the new token should work.
         cachedToken = null
-        liveRefreshToken = getStoredRefreshToken() ?? ''
+        const stored = getStoredRefreshToken() ?? ''
+        if (stored) {
+            refreshLock = attemptRefresh(true)
+            try {
+                cachedToken = await refreshLock
+                return cachedToken!.accessToken
+            } catch {
+                // Stale file too — fall through to throw
+            }
+        }
         throw err
     } finally {
         refreshLock = null
