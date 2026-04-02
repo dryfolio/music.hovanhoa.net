@@ -3,15 +3,27 @@ import { formatDistanceToNow } from 'date-fns'
 import Image from 'next/image'
 
 export async function RecentlyPlayed() {
-    const tracks = await getRecentlyPlayed()
+    let tracks: RecentlyPlayedTrack[] = []
+    try {
+        tracks = await getRecentlyPlayed()
+    } catch {
+        tracks = []
+    }
 
     if (!tracks || tracks.length === 0) {
-        return null
+        return (
+            <div>
+                <h2 className="text-slate-500 leading-relaxed max-w-2xl text-base sm:text-lg">
+                    recently played
+                </h2>
+                <p className="text-slate-400 text-sm mt-2">No recently played tracks available.</p>
+            </div>
+        )
     }
 
     return (
         <div>
-            <h2 className="text-xs tracking-widest mb-4">
+            <h2 className="text-slate-500 leading-relaxed max-w-2xl text-base sm:text-lg">
                 recently played
             </h2>
             <div className="space-y-2">

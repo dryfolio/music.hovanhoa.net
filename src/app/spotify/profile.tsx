@@ -2,7 +2,12 @@ import { getProfile } from '@/lib/spotify'
 import Image from 'next/image'
 
 export async function Profile() {
-    const profile = await getProfile()
+    let profile
+    try {
+        profile = await getProfile()
+    } catch {
+        profile = null
+    }
     const profileUrl = profile?.external_urls?.spotify ?? `https://open.spotify.com/user/${profile?.id}`
 
     if (!profile || !profile.id) {

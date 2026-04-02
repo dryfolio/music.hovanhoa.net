@@ -1,6 +1,3 @@
-import { readFileSync, writeFileSync } from 'fs'
-import { resolve } from 'path'
-
 const NOW_PLAYING_ENDPOINT = `https://api.spotify.com/v1/me/player/currently-playing`
 const TOP_TRACKS_ENDPOINT = `https://api.spotify.com/v1/me/top/tracks?time_range=short_term&limit=25`
 const TOP_ARTISTS_ENDPOINT = `https://api.spotify.com/v1/me/top/artists?time_range=short_term&limit=24`
@@ -11,29 +8,7 @@ const TOKEN_ENDPOINT = `https://accounts.spotify.com/api/token`
 // In-memory cache: one token refresh per process lifetime (until expiry)
 let cachedToken: { accessToken: string; expiresAt: number } | null = null
 let refreshLock: Promise<{ accessToken: string; expiresAt: number }> | null = null
-const TOKEN_PATH = resolve('/tmp', '.spotify-refresh-token')
-
-const persistRefreshToken = (newToken: string) => {
-    try {
-        // Write to a separate file to avoid triggering Next.js .env hot-reload
-        writeFileSync(TOKEN_PATH, newToken)
-        console.log('[Spotify] Refresh token rotated and persisted')
-    } catch (e) {
-        console.error('[Spotify] Failed to persist refresh token:', e)
-    }
-}
-
-// Live refresh token — updated after each successful rotation so concurrent requests use the latest.
-// Initialized from env; the retry path can overwrite it from the /tmp file.
-let liveRefreshToken: string = process.env.SPOTIFY_REFRESH_TOKEN ?? ''
-
-const getStoredRefreshToken = (): string | null => {
-    try {
-        return readFileSync(TOKEN_PATH, 'utf8').trim() || null
-    } catch {
-        return null
-    }
-}
+const REFRESH_TOKEN = process.env.SPOTIFY_REFRESH_TOKEN ?? ''
 
 const doRefresh = async (): Promise<{ accessToken: string; expiresAt: number }> => {
     const basic = Buffer.from(
@@ -47,18 +22,15 @@ const doRefresh = async (): Promise<{ accessToken: string; expiresAt: number }> 
         },
         body: new URLSearchParams({
             grant_type: 'refresh_token',
-            refresh_token: liveRefreshToken,
+            refresh_token: REFRESH_TOKEN,
         }),
     })
     const result = await response.json()
     console.log('[Spotify] Token response:', result)
     if (result.error) {
         console.error('[Spotify] Token error:', result.error_description)
-        throw new Error(result.error_description)
-    }
-    if (result.refresh_token) {
-        liveRefreshToken = result.refresh_token
-        persistRefreshToken(result.refresh_token)
+        refreshLock = null
+        return { accessToken: '', expiresAt: 0 }
     }
     // Cache with a 60s buffer before actual expiry
     const expiresAt = Date.now() + (result.expires_in - 60) * 1000
@@ -82,26 +54,10 @@ const getAccessToken = async (): Promise<string> => {
     try {
         cachedToken = await refreshLock
         return cachedToken!.accessToken
-    } catch (err) {
-        // Token was revoked (rotated by a concurrent request). The winner's new
-        // refresh token is in env (shared across all Lambdas). Retry with that.
-        cachedToken = null
-        liveRefreshToken = process.env.SPOTIFY_REFRESH_TOKEN ?? ''
-        // Also check /tmp — the winner may have persisted there.
-        const stored = getStoredRefreshToken()
-        if (stored) liveRefreshToken = stored
-        if (liveRefreshToken) {
-            // Small delay to let the winning Lambda finish persisting.
-            await new Promise((resolve) => setTimeout(resolve, 200))
-            refreshLock = doRefresh()
-            try {
-                cachedToken = await refreshLock
-                return cachedToken!.accessToken
-            } catch {
-                // Give up — throw original error
-            }
-        }
-        throw err
+    } catch (e) {
+        console.error('[Spotify] Token refresh failed:', e)
+        refreshLock = null
+        return ''
     } finally {
         refreshLock = null
     }

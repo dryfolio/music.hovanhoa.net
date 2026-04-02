@@ -2,18 +2,30 @@ import { getTopArtists, type TopArtist } from '@/lib/spotify'
 import Image from 'next/image'
 
 export async function TopArtists() {
-    const artists = await getTopArtists()
+    let artists: TopArtist[] = []
+    try {
+        artists = await getTopArtists()
+    } catch {
+        artists = []
+    }
 
     if (!artists || artists.length === 0) {
-        return null
+        return (
+            <div>
+                <h2 className="text-slate-500 leading-relaxed max-w-2xl text-base sm:text-lg">
+                    top artists
+                </h2>
+                <p className="text-slate-400 text-sm mt-2">No top artists available.</p>
+            </div>
+        )
     }
 
     return (
         <div>
-            <h2 className="text-xs tracking-widest mb-4">
+            <h2 className="text-slate-500 leading-relaxed max-w-2xl text-base sm:text-lg">
                 top artists
             </h2>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+            <div className="text-slate-500 leading-relaxed max-w-2xl text-base sm:text-lg">
                 {artists.map((artist: TopArtist) => (
                     <a
                         key={artist.id}
