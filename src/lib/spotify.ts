@@ -10,12 +10,12 @@ const TOKEN_ENDPOINT = `https://accounts.spotify.com/api/token`
 // In-memory cache: one token refresh per process lifetime (until expiry)
 let cachedToken: { accessToken: string; expiresAt: number } | null = null
 let refreshLock: Promise<{ accessToken: string; expiresAt: number }> | null = null
+const TOKEN_PATH = resolve(process.cwd(), '.spotify-refresh-token')
 
 const persistRefreshToken = (newToken: string) => {
     try {
         // Write to a separate file to avoid triggering Next.js .env hot-reload
-        const tokenPath = resolve(process.cwd(), '.spotify-refresh-token')
-        writeFileSync(tokenPath, newToken)
+        writeFileSync(TOKEN_PATH, newToken)
         console.log('[Spotify] Refresh token rotated and persisted')
     } catch (e) {
         console.error('[Spotify] Failed to persist refresh token:', e)
@@ -24,12 +24,20 @@ const persistRefreshToken = (newToken: string) => {
 
 const getStoredRefreshToken = (): string | null => {
     try {
-        const tokenPath = resolve(process.cwd(), '.spotify-refresh-token')
-        return readFileSync(tokenPath, 'utf8').trim()
+        return readFileSync(TOKEN_PATH, 'utf8').trim() || null
     } catch {
         return null
     }
 }
+
+// Get the current refresh token — persisted file wins because it holds the latest
+// rotated token; env is only the initial seed (also survives Next.js hot-reloads).
+const getRefreshToken = (): string => {
+    return getStoredRefreshToken() ?? process.env.SPOTIFY_REFRESH_TOKEN ?? ''
+}
+
+// Live refresh token — updated after each successful rotation so concurrent requests use the latest
+let liveRefreshToken: string = getRefreshToken()
 
 const doRefresh = async (): Promise<{ accessToken: string; expiresAt: number }> => {
     const basic = Buffer.from(
@@ -43,7 +51,7 @@ const doRefresh = async (): Promise<{ accessToken: string; expiresAt: number }> 
         },
         body: new URLSearchParams({
             grant_type: 'refresh_token',
-            refresh_token: process.env.SPOTIFY_REFRESH_TOKEN ?? getStoredRefreshToken() ?? '',
+            refresh_token: liveRefreshToken,
         }),
     })
     const result = await response.json()
@@ -53,6 +61,7 @@ const doRefresh = async (): Promise<{ accessToken: string; expiresAt: number }> 
         throw new Error(result.error_description)
     }
     if (result.refresh_token) {
+        liveRefreshToken = result.refresh_token
         persistRefreshToken(result.refresh_token)
     }
     // Cache with a 60s buffer before actual expiry
@@ -77,6 +86,12 @@ const getAccessToken = async (): Promise<string> => {
     try {
         cachedToken = await refreshLock
         return cachedToken!.accessToken
+    } catch (err) {
+        // Token was revoked (e.g. rotated by another concurrent request).
+        // Invalidate cached state and reload from persisted file for the next retry.
+        cachedToken = null
+        liveRefreshToken = getStoredRefreshToken() ?? ''
+        throw err
     } finally {
         refreshLock = null
     }
