@@ -1,4 +1,4 @@
-import { BASE_URL, INSIGHT_URL, GALLERY_URL } from '@/constants'
+import { BASE_URL, MUSIC_URL, INSIGHT_URL, GALLERY_URL } from '@/constants'
 import Link from 'next/link'
 import React from 'react'
 
@@ -24,6 +24,12 @@ export default function Navbar() {
                         href={GALLERY_URL}
                     >
                         Gallery
+                    </Link>
+                    <Link
+                        className="hover:underline hover:decoration-wavy hover:underline-offset-8 transition duration-300 ease-in-out"
+                        href={MUSIC_URL}
+                    >
+                        Music
                     </Link>
                 </ul>
             </nav>
