@@ -35,19 +35,8 @@ export async function TopArtists() {
                             <h3 className="text-lg sm:text-xl font-bold text-white drop-shadow-sm line-clamp-1">
                                 {artist.name}
                             </h3>
-                            <div className="flex items-center gap-3 text-xs text-zinc-300">
-                                <div className="flex items-center gap-1">
-                                    <svg
-                                        xmlns="http://www.w3.org/2000/svg"
-                                        className="w-4 h-4"
-                                        viewBox="0 0 20 20"
-                                        fill="currentColor"
-                                    >
-                                        <path d="M8 9a3 3 0 100-6 3 3 0 000 6zM8 11a6 6 0 016 6H2a6 6 0 016-6z" />
-                                    </svg>
-                                    <span>{artist.followers?.total?.toLocaleString() ?? 0}</span>
-                                </div>
-                                <div className="flex items-center gap-1">
+                            {artist.popularity != null && (
+                                <div className="flex items-center gap-1 text-xs text-zinc-300">
                                     <svg
                                         xmlns="http://www.w3.org/2000/svg"
                                         className="w-4 h-4"
@@ -58,7 +47,7 @@ export async function TopArtists() {
                                     </svg>
                                     <span>{artist.popularity}%</span>
                                 </div>
-                            </div>
+                            )}
                         </div>
                     </a>
                 ))}
