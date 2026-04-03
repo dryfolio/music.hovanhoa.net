@@ -284,10 +284,6 @@ export interface TopArtist {
     external_urls: {
         spotify: string
     }
-    followers: {
-        href: string | null
-        total: number
-    }
     genres: string[]
     href: string
     id: string
@@ -297,7 +293,7 @@ export interface TopArtist {
         width: number | null
     }[]
     name: string
-    popularity: number
+    popularity?: number
     type: 'artist'
     uri: string
 }
@@ -312,7 +308,6 @@ const getTopArtists = async (): Promise<TopArtist[]> => {
     })
     console.log('[Spotify] TopArtists status:', res2.status)
     const text2 = await res2.text()
-    console.log('[Spotify] TopArtists body:', text2.substring(0, 200))
     let artistItems: any[] = []
     try {
         const data = JSON.parse(text2)
@@ -320,11 +315,9 @@ const getTopArtists = async (): Promise<TopArtist[]> => {
     } catch (e) {
         console.error('[Spotify] TopArtists parse error:', e)
     }
-    console.log('[Spotify] TopArtists items:', artistItems?.length ?? 0)
     const artists: TopArtist[] =
         artistItems?.map((artist: any) => ({
             external_urls: artist.external_urls,
-            followers: artist.followers,
             genres: artist.genres,
             href: artist.href,
             id: artist.id,
