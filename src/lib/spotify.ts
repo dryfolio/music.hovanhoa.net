@@ -9,6 +9,37 @@ const TOKEN_ENDPOINT = `https://accounts.spotify.com/api/token`
 let refreshLock: Promise<{ accessToken: string; expiresAt: number }> | null =
     null
 
+const FETCH_TIMEOUT_MS = 6000
+const FETCH_RETRIES = 2
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
+
+const fetchWithTimeout = async (
+    url: string,
+    init: RequestInit = {},
+    retries = FETCH_RETRIES
+): Promise<Response> => {
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
+    try {
+        const res = await fetch(url, { ...init, signal: controller.signal })
+        // Retry on 5xx / 429 (rate limit). 4xx (other) is a real error — don't retry.
+        if (!res.ok && retries > 0 && (res.status >= 500 || res.status === 429)) {
+            await sleep(300)
+            return fetchWithTimeout(url, init, retries - 1)
+        }
+        return res
+    } catch (e) {
+        if (retries > 0) {
+            await sleep(300)
+            return fetchWithTimeout(url, init, retries - 1)
+        }
+        throw e
+    } finally {
+        clearTimeout(timeoutId)
+    }
+}
+
 const getRedis = async () => {
     const { Redis } = await import('@upstash/redis')
     return new Redis({
@@ -24,7 +55,7 @@ const doRefresh = async (
     const basic = Buffer.from(
         `${process.env.SPOTIFY_CLIENT_ID}:${process.env.SPOTIFY_CLIENT_SECRET}`
     ).toString('base64')
-    const response = await fetch(TOKEN_ENDPOINT, {
+    const response = await fetchWithTimeout(TOKEN_ENDPOINT, {
         method: 'POST',
         headers: {
             Authorization: `Basic ${basic}`,
@@ -38,7 +69,6 @@ const doRefresh = async (
     const result = await response.json()
     if (result.error) {
         console.error('[Spotify] Token error:', result.error_description)
-        refreshLock = null
         return { accessToken: '', expiresAt: 0 }
     }
 
@@ -90,12 +120,22 @@ const getAccessToken = async (): Promise<string> => {
 }
 
 const spotifyFetch = async <T>(url: string): Promise<T | null> => {
-    const accessToken = await getAccessToken()
-    const res = await fetch(url, {
-        headers: { Authorization: `Bearer ${accessToken}` },
-    })
-    if (!res.ok) return null
-    return (await res.json()) as T
+    try {
+        const accessToken = await getAccessToken()
+        if (!accessToken) return null
+        const res = await fetchWithTimeout(url, {
+            headers: { Authorization: `Bearer ${accessToken}` },
+            next: { revalidate: 60 },
+        })
+        if (!res.ok) {
+            console.error('[Spotify] fetch failed:', url, res.status)
+            return null
+        }
+        return (await res.json()) as T
+    } catch (e) {
+        console.error('[Spotify] fetch error:', url, e)
+        return null
+    }
 }
 
 export interface SpotifyArtistRef {
@@ -135,11 +175,7 @@ export interface SpotifyProfile {
 }
 
 const getProfile = async (): Promise<SpotifyProfile | null> => {
-    try {
-        return await spotifyFetch<SpotifyProfile>(PROFILE_ENDPOINT)
-    } catch {
-        return null
-    }
+    return spotifyFetch<SpotifyProfile>(PROFILE_ENDPOINT)
 }
 
 const getNowPlaying = async (): Promise<NowPlaying> => {
