@@ -4,15 +4,16 @@ import Image from 'next/image'
 export async function TopArtists() {
     const artists = await getTopArtists()
 
-    if (!artists || artists.length === 0) {
-        return null
-    }
-
     return (
         <div>
             <h2 className="text-slate-500 leading-relaxed max-w-2xl text-base sm:text-lg">
                 top artists
             </h2>
+            {(!artists || artists.length === 0) && (
+                <p className="text-slate-400 text-sm mt-2">
+                    couldn&apos;t load right now — try refreshing.
+                </p>
+            )}
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                 {artists.map((artist: TopArtist) => (
                     <a

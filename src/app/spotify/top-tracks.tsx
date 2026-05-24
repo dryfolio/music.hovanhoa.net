@@ -4,15 +4,16 @@ import Image from 'next/image'
 export async function TopTracks() {
     const tracks = await getTopTracks()
 
-    if (!tracks || tracks.length === 0) {
-        return null
-    }
-
     return (
         <div>
             <h2 className="text-slate-500 leading-relaxed max-w-2xl text-base sm:text-lg">
                 top tracks
             </h2>
+            {(!tracks || tracks.length === 0) && (
+                <p className="text-slate-400 text-sm mt-2">
+                    couldn&apos;t load right now — try refreshing.
+                </p>
+            )}
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
                 {tracks.map((track: TopTrack) => (
                     <a

@@ -8,6 +8,37 @@ const TOKEN_ENDPOINT = `https://accounts.spotify.com/api/token`
 // In-memory lock: prevents concurrent refresh calls within a single warm Lambda
 let refreshLock: Promise<{ accessToken: string; expiresAt: number }> | null = null
 
+const FETCH_TIMEOUT_MS = 6000
+const FETCH_RETRIES = 2
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
+
+const fetchWithTimeout = async (
+    url: string,
+    init: RequestInit = {},
+    retries = FETCH_RETRIES
+): Promise<Response> => {
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
+    try {
+        const res = await fetch(url, { ...init, signal: controller.signal })
+        // Retry on 5xx / 429 (rate limit). 4xx (other) is a real error — don't retry.
+        if (!res.ok && retries > 0 && (res.status >= 500 || res.status === 429)) {
+            await sleep(300)
+            return fetchWithTimeout(url, init, retries - 1)
+        }
+        return res
+    } catch (e) {
+        if (retries > 0) {
+            await sleep(300)
+            return fetchWithTimeout(url, init, retries - 1)
+        }
+        throw e
+    } finally {
+        clearTimeout(timeoutId)
+    }
+}
+
 const getRedis = async () => {
     const { Redis } = await import('@upstash/redis')
     return new Redis({
@@ -23,7 +54,7 @@ const doRefresh = async (
     const basic = Buffer.from(
         `${process.env.SPOTIFY_CLIENT_ID}:${process.env.SPOTIFY_CLIENT_SECRET}`
     ).toString('base64')
-    const response = await fetch(TOKEN_ENDPOINT, {
+    const response = await fetchWithTimeout(TOKEN_ENDPOINT, {
         method: 'POST',
         headers: {
             Authorization: `Basic ${basic}`,
@@ -35,10 +66,8 @@ const doRefresh = async (
         }),
     })
     const result = await response.json()
-    console.log('[Spotify] Token response:', result)
     if (result.error) {
         console.error('[Spotify] Token error:', result.error_description)
-        refreshLock = null
         return { accessToken: '', expiresAt: 0 }
     }
 
@@ -114,22 +143,26 @@ export interface SpotifyProfile {
 const getProfile = async (): Promise<SpotifyProfile | null> => {
     try {
         const access_token = await getAccessToken()
-        const res = await fetch(PROFILE_ENDPOINT, {
+        if (!access_token) return null
+        const res = await fetchWithTimeout(PROFILE_ENDPOINT, {
             headers: {
                 Authorization: `Bearer ${access_token}`,
             },
+            next: { revalidate: 60 },
         })
         if (!res.ok) return null
         return res.json()
-    } catch {
+    } catch (e) {
+        console.error('[Spotify] Profile fetch failed:', e)
         return null
     }
 }
 
 const getNowPlaying = async (): Promise<NowPlaying> => {
     const access_token = await getAccessToken()
+    if (!access_token) return { isPlaying: false }
 
-    const res = await fetch(NOW_PLAYING_ENDPOINT, {
+    const res = await fetchWithTimeout(NOW_PLAYING_ENDPOINT, {
         headers: {
             Authorization: `Bearer ${access_token}`,
         },
@@ -190,34 +223,34 @@ export interface TopTrack {
 }
 
 const getTopTracks = async (): Promise<TopTrack[]> => {
-    const access_token = await getAccessToken()
-
-    const res1 = await fetch(TOP_TRACKS_ENDPOINT, {
-        headers: {
-            Authorization: `Bearer ${access_token}`,
-        },
-    })
-    console.log('[Spotify] TopTracks status:', res1.status)
-    const text1 = await res1.text()
-    console.log('[Spotify] TopTracks body:', text1.substring(0, 200))
-    let topItems: any[] = []
     try {
-        const data = JSON.parse(text1)
-        topItems = data.items || []
-    } catch (e) {
-        console.error('[Spotify] TopTracks parse error:', e)
-    }
-    console.log('[Spotify] TopTracks items:', topItems?.length ?? 0)
-    const tracks: TopTrack[] =
-        topItems?.map((track: any) => ({
+        const access_token = await getAccessToken()
+        if (!access_token) return []
+
+        const res1 = await fetchWithTimeout(TOP_TRACKS_ENDPOINT, {
+            headers: {
+                Authorization: `Bearer ${access_token}`,
+            },
+            next: { revalidate: 60 },
+        })
+        if (!res1.ok) {
+            console.error('[Spotify] TopTracks status:', res1.status)
+            return []
+        }
+        const data = await res1.json()
+        const topItems: any[] = data.items || []
+        return topItems.map((track: any) => ({
             id: track.id,
             artist: track.artists,
             songUrl: track.external_urls.spotify,
             title: track.name,
             imageUrl: track.album.images[1]?.url ?? track.album.images[0]?.url ?? '',
             previewUrl: track.preview_url ?? '',
-        })) || []
-    return tracks
+        }))
+    } catch (e) {
+        console.error('[Spotify] TopTracks fetch failed:', e)
+        return []
+    }
 }
 
 export interface RecentlyPlayedTrack {
@@ -250,34 +283,34 @@ export interface RecentlyPlayedTrack {
 }
 
 const getRecentlyPlayed = async (): Promise<RecentlyPlayedTrack[]> => {
-    const access_token = await getAccessToken()
-    const response = await fetch(RECENTLY_PLAYED_ENDPOINT, {
-        headers: {
-            Authorization: `Bearer ${access_token}`,
-        },
-    })
-    console.log('[Spotify] RecentlyPlayed status:', response.status)
-    const text = await response.text()
-    console.log('[Spotify] RecentlyPlayed body:', text.substring(0, 200))
-    let items: any[] = []
     try {
-        const data = JSON.parse(text)
-        items = data.items || []
-    } catch (e) {
-        console.error('[Spotify] RecentlyPlayed parse error:', e)
-    }
-    console.log('[Spotify] RecentlyPlayed items:', items?.length ?? 0)
-    const tracks: RecentlyPlayedTrack[] =
-        items?.map((track: any) => ({
+        const access_token = await getAccessToken()
+        if (!access_token) return []
+
+        const response = await fetchWithTimeout(RECENTLY_PLAYED_ENDPOINT, {
+            headers: {
+                Authorization: `Bearer ${access_token}`,
+            },
+            next: { revalidate: 60 },
+        })
+        if (!response.ok) {
+            console.error('[Spotify] RecentlyPlayed status:', response.status)
+            return []
+        }
+        const data = await response.json()
+        const items: any[] = data.items || []
+        return items.map((track: any) => ({
             id: track.track.id,
             artist: track.track.artists,
             songUrl: track.track.external_urls.spotify,
             title: track.track.name,
             imageUrl: track.track.album.images[1]?.url ?? track.track.album.images[0]?.url ?? '',
             played_at: track.played_at,
-        })) || []
-
-    return tracks
+        }))
+    } catch (e) {
+        console.error('[Spotify] RecentlyPlayed fetch failed:', e)
+        return []
+    }
 }
 
 export interface TopArtist {
@@ -299,24 +332,23 @@ export interface TopArtist {
 }
 
 const getTopArtists = async (): Promise<TopArtist[]> => {
-    const access_token = await getAccessToken()
-
-    const res2 = await fetch(TOP_ARTISTS_ENDPOINT, {
-        headers: {
-            Authorization: `Bearer ${access_token}`,
-        },
-    })
-    console.log('[Spotify] TopArtists status:', res2.status)
-    const text2 = await res2.text()
-    let artistItems: any[] = []
     try {
-        const data = JSON.parse(text2)
-        artistItems = data.items || []
-    } catch (e) {
-        console.error('[Spotify] TopArtists parse error:', e)
-    }
-    const artists: TopArtist[] =
-        artistItems?.map((artist: any) => ({
+        const access_token = await getAccessToken()
+        if (!access_token) return []
+
+        const res2 = await fetchWithTimeout(TOP_ARTISTS_ENDPOINT, {
+            headers: {
+                Authorization: `Bearer ${access_token}`,
+            },
+            next: { revalidate: 60 },
+        })
+        if (!res2.ok) {
+            console.error('[Spotify] TopArtists status:', res2.status)
+            return []
+        }
+        const data = await res2.json()
+        const artistItems: any[] = data.items || []
+        return artistItems.map((artist: any) => ({
             external_urls: artist.external_urls,
             genres: artist.genres,
             href: artist.href,
@@ -326,8 +358,11 @@ const getTopArtists = async (): Promise<TopArtist[]> => {
             popularity: artist.popularity,
             type: artist.type,
             uri: artist.uri,
-        })) || []
-    return artists
+        }))
+    } catch (e) {
+        console.error('[Spotify] TopArtists fetch failed:', e)
+        return []
+    }
 }
 
 export { getNowPlaying, getTopTracks, getRecentlyPlayed, getTopArtists, getProfile }

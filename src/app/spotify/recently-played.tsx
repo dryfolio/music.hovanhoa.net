@@ -5,15 +5,16 @@ import Image from 'next/image'
 export async function RecentlyPlayed() {
     const tracks = await getRecentlyPlayed()
 
-    if (!tracks || tracks.length === 0) {
-        return null
-    }
-
     return (
         <div>
             <h2 className="text-slate-500 leading-relaxed max-w-2xl text-base sm:text-lg">
                 recently played
             </h2>
+            {(!tracks || tracks.length === 0) && (
+                <p className="text-slate-400 text-sm mt-2">
+                    couldn&apos;t load right now — try refreshing.
+                </p>
+            )}
             <div className="space-y-2">
                 {tracks.map((track: RecentlyPlayedTrack) => (
                     <a
