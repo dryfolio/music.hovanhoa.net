@@ -11,7 +11,7 @@ export async function TopTracks() {
                 <Eyebrow>top tracks</Eyebrow>
             </div>
             {(!tracks || tracks.length === 0) && (
-                <p className="text-slate-400 text-sm mt-2">
+                <p className="text-[var(--rd-text-3)] text-sm mt-2">
                     couldn&apos;t load right now — try refreshing.
                 </p>
             )}
@@ -45,10 +45,10 @@ export async function TopTracks() {
                                 </svg>
                             </div>
                         </div>
-                        <h3 className="font-medium text-xs sm:text-sm text-slate-800 group-hover:text-slate-900 transition-colors line-clamp-1">
+                        <h3 className="font-medium text-xs sm:text-sm text-[var(--rd-text)] group-hover:text-[var(--rd-accent-ink)] transition-colors line-clamp-1">
                             {track.title}
                         </h3>
-                        <p className="text-slate-500 text-xs line-clamp-1">
+                        <p className="text-[var(--rd-text-2)] text-xs line-clamp-1">
                             {track.artist.map((a) => a.name).join(', ')}
                         </p>
                     </a>
