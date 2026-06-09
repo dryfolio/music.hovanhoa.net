@@ -3,7 +3,9 @@ import Image from 'next/image'
 
 export async function Profile() {
     const profile = await getProfile()
-    const profileUrl = profile?.external_urls?.spotify ?? `https://open.spotify.com/user/${profile?.id}`
+    const profileUrl =
+        profile?.external_urls?.spotify ??
+        `https://open.spotify.com/user/${profile?.id}`
 
     if (!profile || !profile.id) {
         return null
@@ -14,7 +16,7 @@ export async function Profile() {
             href={profileUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="group flex items-center gap-4 p-4 rounded-2xl border border-slate-200 bg-white hover:border-emerald-400 transition-all duration-300 hover:shadow-md"
+            className="rd-card group flex items-center gap-4 p-4 hover:border-[var(--rd-accent)] transition-all duration-300"
         >
             <div className="relative w-16 h-16 sm:w-20 sm:h-20 flex-shrink-0">
                 {profile.images[0]?.url ? (

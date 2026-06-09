@@ -1,15 +1,12 @@
 import Navbar from '@/components/nav'
 import { Footer } from '@/components/footer'
 import { Metadata } from 'next'
-import Link from 'next/link'
-import Image from 'next/image'
 import {
     BASE_URL,
     NAME,
     FULL_NAME,
     ROLE,
     TWITTER,
-    IMAGE as AVATAR,
     SPOTIFY_PROFILE_URL,
 } from '@/constants'
 import { Suspense } from 'react'
@@ -18,6 +15,7 @@ import { TopTracks } from './spotify/top-tracks'
 import { TopArtists } from './spotify/top-artists'
 import { Profile } from './spotify/profile'
 import { SkeletonCard } from '@/components/skeleton-card'
+import { Eyebrow } from '@/components/redesign/eyebrow'
 
 export const metadata: Metadata = {
     title: `${NAME} | music`,
@@ -58,40 +56,43 @@ export const revalidate = 60
 
 export default async function Music() {
     return (
-        <main className="min-h-screen relative pt-8">
-            <section className="relative mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 overflow-hidden">
-                <div className="items-center flex justify-between mb-4 sm:mb-6 gap-2 sm:gap-0">
-                    <Link href={BASE_URL}>
-                        <div className="border border-slate-200 p-1 rounded-full">
-                            <Image
-                                src={AVATAR}
-                                alt={NAME}
-                                className="h-10 w-10 sm:h-12 sm:w-12 rounded-full"
-                                height={100}
-                                width={100}
-                            />
-                        </div>
-                    </Link>
+        <main className="min-h-screen relative">
+            {/* sticky header */}
+            <header className="sticky top-0 z-50 border-b border-[var(--rd-border-2)] bg-[var(--rd-bg-sub)] shadow-[0_1px_3px_rgba(0,0,0,0.03)]">
+                <div className="mx-auto w-full max-w-[var(--rd-maxw)] px-[var(--rd-pad)] py-3">
                     <Navbar />
                 </div>
-                <div className="mt-12 sm:mt-20 space-y-8 sm:space-y-10">
-                    <div className="mb-2">
-                        <h1 className="text-4xl sm:text-3xl font-bold tracking-tight text-slate-900 mb-3">
-                            my music library
-                        </h1>
-                        <p className="text-slate-500 leading-relaxed max-w-2xl text-base sm:text-lg">
-                            what i&apos;ve been listening to, powered by{' '}
-                            <a
-                                href={SPOTIFY_PROFILE_URL}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-emerald-500 hover:text-emerald-600 transition-colors font-medium"
-                            >
-                                spotify
-                            </a>
-                            .
-                        </p>
-                    </div>
+            </header>
+            {/* header panel — matches the footer treatment */}
+            <div
+                className="border-b border-[var(--rd-border)]"
+                style={{
+                    background:
+                        'radial-gradient(100% 140% at 0% 0%, var(--rd-accent-bg), transparent 55%), var(--rd-surface-2)',
+                }}
+            >
+                <div className="mx-auto max-w-[var(--rd-maxw)] px-[var(--rd-pad)] pt-12 pb-12">
+                    <Eyebrow>hovanhoa · music</Eyebrow>
+                    <h1 className="mt-[18px] text-[clamp(2rem,4.6vw,3.4rem)] font-semibold tracking-[-0.04em] text-[var(--rd-text)]">
+                        my music library
+                    </h1>
+                    <p className="rd-lead mt-5">
+                        what i&apos;ve been listening to, powered by{' '}
+                        <a
+                            href={SPOTIFY_PROFILE_URL}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-emerald-500 hover:text-emerald-600 transition-colors font-medium"
+                        >
+                            spotify
+                        </a>
+                        .
+                    </p>
+                </div>
+            </div>
+            {/* body */}
+            <div className="mx-auto max-w-[var(--rd-maxw)] px-[var(--rd-pad)] pt-14">
+                <div className="space-y-8 sm:space-y-10">
                     <Suspense fallback={<SkeletonCard />}>
                         <Profile />
                     </Suspense>
@@ -105,10 +106,8 @@ export default async function Music() {
                         <TopArtists />
                     </Suspense>
                 </div>
-            </section>
-            <div className="py-6 sm:py-8 md:py-12 pb-0 px-4 sm:px-6 lg:pl-52 mb-8 md:mb-0">
-                <Footer />
             </div>
+            <Footer />
         </main>
     )
 }

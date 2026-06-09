@@ -1,14 +1,15 @@
 import { getTopTracks, type TopTrack } from '@/lib/spotify'
 import Image from 'next/image'
+import { Eyebrow } from '@/components/redesign/eyebrow'
 
 export async function TopTracks() {
     const tracks = await getTopTracks()
 
     return (
         <div>
-            <h2 className="text-slate-500 leading-relaxed max-w-2xl text-base sm:text-lg">
-                top tracks
-            </h2>
+            <div className="mb-4">
+                <Eyebrow>top tracks</Eyebrow>
+            </div>
             {(!tracks || tracks.length === 0) && (
                 <p className="text-slate-400 text-sm mt-2">
                     couldn&apos;t load right now — try refreshing.
@@ -21,7 +22,7 @@ export async function TopTracks() {
                         href={track.songUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="group block p-2 rounded-xl border border-slate-200 bg-white/60 backdrop-blur-sm transition-all duration-200 hover:bg-white/90 hover:shadow-md hover:border-slate-300"
+                        className="rd-card group block p-2 transition-all duration-200 hover:border-[var(--rd-border-2)]"
                     >
                         <div className="relative aspect-square mb-2">
                             <Image

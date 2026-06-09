@@ -1,15 +1,16 @@
 import { getRecentlyPlayed, type RecentlyPlayedTrack } from '@/lib/spotify'
 import { formatDistanceToNow } from 'date-fns'
 import Image from 'next/image'
+import { Eyebrow } from '@/components/redesign/eyebrow'
 
 export async function RecentlyPlayed() {
     const tracks = await getRecentlyPlayed()
 
     return (
         <div>
-            <h2 className="text-slate-500 leading-relaxed max-w-2xl text-base sm:text-lg">
-                recently played
-            </h2>
+            <div className="mb-4">
+                <Eyebrow>recently played</Eyebrow>
+            </div>
             {(!tracks || tracks.length === 0) && (
                 <p className="text-slate-400 text-sm mt-2">
                     couldn&apos;t load right now — try refreshing.
@@ -22,7 +23,7 @@ export async function RecentlyPlayed() {
                         href={track.songUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="group flex items-center gap-3 p-2 rounded-xl border border-slate-200 bg-white/60 backdrop-blur-sm transition-all duration-200 hover:bg-white/90 hover:shadow-sm hover:border-slate-300"
+                        className="rd-card group flex items-center gap-3 p-2 transition-all duration-200 hover:border-[var(--rd-border-2)]"
                     >
                         <div className="relative w-12 h-12 sm:w-16 sm:h-16 flex-shrink-0">
                             <Image
@@ -54,9 +55,12 @@ export async function RecentlyPlayed() {
                             </p>
                             <p className="text-slate-400 text-xs mt-0.5">
                                 Played{' '}
-                                {formatDistanceToNow(new Date(track.played_at), {
-                                    addSuffix: true,
-                                })}
+                                {formatDistanceToNow(
+                                    new Date(track.played_at),
+                                    {
+                                        addSuffix: true,
+                                    }
+                                )}
                             </p>
                         </div>
                     </a>
