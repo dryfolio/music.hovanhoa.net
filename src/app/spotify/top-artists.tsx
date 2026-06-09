@@ -1,14 +1,15 @@
 import { getTopArtists, type TopArtist } from '@/lib/spotify'
 import Image from 'next/image'
+import { Eyebrow } from '@/components/redesign/eyebrow'
 
 export async function TopArtists() {
     const artists = await getTopArtists()
 
     return (
         <div>
-            <h2 className="text-slate-500 leading-relaxed max-w-2xl text-base sm:text-lg">
-                top artists
-            </h2>
+            <div className="mb-4">
+                <Eyebrow>top artists</Eyebrow>
+            </div>
             {(!artists || artists.length === 0) && (
                 <p className="text-slate-400 text-sm mt-2">
                     couldn&apos;t load right now — try refreshing.
@@ -21,7 +22,7 @@ export async function TopArtists() {
                         href={artist.external_urls.spotify}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="group block relative overflow-hidden rounded-xl aspect-[4/3]"
+                        className="group block relative overflow-hidden rounded-[var(--rd-r)] border border-[var(--rd-border)] aspect-[4/3]"
                     >
                         <Image
                             src={artist.images[0]?.url ?? ''}

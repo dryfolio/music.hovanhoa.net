@@ -24,7 +24,11 @@ const fetchWithTimeout = async (
     try {
         const res = await fetch(url, { ...init, signal: controller.signal })
         // Retry on 5xx / 429 (rate limit). 4xx (other) is a real error — don't retry.
-        if (!res.ok && retries > 0 && (res.status >= 500 || res.status === 429)) {
+        if (
+            !res.ok &&
+            retries > 0 &&
+            (res.status >= 500 || res.status === 429)
+        ) {
             await sleep(300)
             return fetchWithTimeout(url, init, retries - 1)
         }

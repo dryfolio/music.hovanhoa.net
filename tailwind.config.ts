@@ -40,7 +40,7 @@ const config: Config = {
     },
     extend: {
       colors: {
-        primary: "#0ea5e9",
+        primary: "#d8602f",
       },
     },
   },
