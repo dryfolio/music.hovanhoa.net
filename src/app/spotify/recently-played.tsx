@@ -12,7 +12,7 @@ export async function RecentlyPlayed() {
                 <Eyebrow>recently played</Eyebrow>
             </div>
             {(!tracks || tracks.length === 0) && (
-                <p className="text-slate-400 text-sm mt-2">
+                <p className="text-[var(--rd-text-3)] text-sm mt-2">
                     couldn&apos;t load right now — try refreshing.
                 </p>
             )}
@@ -47,13 +47,13 @@ export async function RecentlyPlayed() {
                             </div>
                         </div>
                         <div className="flex-1 min-w-0">
-                            <h3 className="font-medium text-sm sm:text-base text-slate-800 group-hover:text-slate-900 transition-colors line-clamp-1">
+                            <h3 className="font-medium text-sm sm:text-base text-[var(--rd-text)] group-hover:text-[var(--rd-accent-ink)] transition-colors line-clamp-1">
                                 {track.title}
                             </h3>
-                            <p className="text-slate-500 text-xs sm:text-sm line-clamp-1">
+                            <p className="text-[var(--rd-text-2)] text-xs sm:text-sm line-clamp-1">
                                 {track.artist.map((a) => a.name).join(', ')}
                             </p>
-                            <p className="text-slate-400 text-xs mt-0.5">
+                            <p className="text-[var(--rd-text-3)] text-xs mt-0.5">
                                 Played{' '}
                                 {formatDistanceToNow(
                                     new Date(track.played_at),

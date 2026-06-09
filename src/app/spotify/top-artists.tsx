@@ -11,7 +11,7 @@ export async function TopArtists() {
                 <Eyebrow>top artists</Eyebrow>
             </div>
             {(!artists || artists.length === 0) && (
-                <p className="text-slate-400 text-sm mt-2">
+                <p className="text-[var(--rd-text-3)] text-sm mt-2">
                     couldn&apos;t load right now — try refreshing.
                 </p>
             )}
