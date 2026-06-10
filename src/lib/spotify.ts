@@ -5,9 +5,14 @@ const RECENTLY_PLAYED_ENDPOINT = `https://api.spotify.com/v1/me/player/recently-
 const PROFILE_ENDPOINT = `https://api.spotify.com/v1/me`
 const TOKEN_ENDPOINT = `https://accounts.spotify.com/api/token`
 
-// In-memory lock: prevents concurrent refresh calls within a single warm Lambda
-let refreshLock: Promise<{ accessToken: string; expiresAt: number }> | null =
-    null
+// In-memory token cache + in-flight dedupe: the 4 page sections render
+// concurrently and would otherwise each hit Redis/Spotify for a token
+let memToken: { accessToken: string; expiresAt: number } | null = null
+let tokenInFlight: Promise<string> | null = null
+
+const TOKEN_KEY = 'spotify_token'
+const TOKEN_LOCK_KEY = 'spotify_token_lock'
+const REFRESH_BACKOFF_KEY = 'spotify_refresh_backoff'
 
 const FETCH_TIMEOUT_MS = 6000
 const FETCH_RETRIES = 2
@@ -52,6 +57,12 @@ const getRedis = async () => {
     })
 }
 
+type CachedToken = {
+    accessToken: string
+    expiresAt: number
+    refreshToken: string
+}
+
 const doRefresh = async (
     redis: Awaited<ReturnType<typeof getRedis>>,
     refreshToken: string
@@ -80,7 +91,7 @@ const doRefresh = async (
     const expiresAt = Date.now() + (result.expires_in - 60) * 1000
     const newRefreshToken = result.refresh_token ?? refreshToken
     await redis.set(
-        'spotify_token',
+        TOKEN_KEY,
         JSON.stringify({
             accessToken: result.access_token,
             expiresAt,
@@ -91,54 +102,121 @@ const doRefresh = async (
     return { accessToken: result.access_token, expiresAt }
 }
 
-const getAccessToken = async (): Promise<string> => {
-    // Re-use an in-flight refresh to avoid hammering Spotify with concurrent requests
-    if (refreshLock) {
-        const result = await refreshLock
-        return result.accessToken
+// Spotify rotates the refresh token on every refresh: if two serverless
+// instances refresh concurrently, the loser uses an already-rotated token and
+// Spotify revokes the whole chain. A Redis NX lock makes refresh exclusive
+// across instances — losers poll for the winner's persisted token instead.
+const refreshWithLock = async (
+    redis: Awaited<ReturnType<typeof getRedis>>
+): Promise<{ accessToken: string; expiresAt: number }> => {
+    const gotLock = await redis.set(TOKEN_LOCK_KEY, '1', { nx: true, ex: 15 })
+    if (!gotLock) {
+        for (let i = 0; i < 20; i++) {
+            await sleep(500)
+            const cached = (await redis.get(TOKEN_KEY)) as CachedToken | null
+            if (cached && Date.now() < cached.expiresAt) return cached
+        }
+        return { accessToken: '', expiresAt: 0 }
     }
 
-    const redis = await getRedis()
-    const cached = (await redis.get('spotify_token')) as {
-        accessToken: string
-        expiresAt: number
-        refreshToken: string
-    } | null
-
-    if (cached && Date.now() < cached.expiresAt) {
-        return cached.accessToken
-    }
-
-    const refreshToken =
-        cached?.refreshToken ?? process.env.SPOTIFY_REFRESH_TOKEN ?? ''
-
-    refreshLock = doRefresh(redis, refreshToken)
     try {
-        return (await refreshLock).accessToken
-    } catch (e) {
-        console.error('[Spotify] Token refresh failed:', e)
-        return ''
+        // Re-read under the lock — another instance may have just refreshed
+        const cached = (await redis.get(TOKEN_KEY)) as CachedToken | null
+        if (cached && Date.now() < cached.expiresAt) return cached
+
+        if (await redis.get(REFRESH_BACKOFF_KEY)) {
+            return { accessToken: '', expiresAt: 0 }
+        }
+
+        const envToken = process.env.SPOTIFY_REFRESH_TOKEN ?? ''
+        let result = await doRefresh(redis, cached?.refreshToken || envToken)
+        // The cached token can be stale (e.g. a deploy raced a rotation) —
+        // fall back to the env token once before giving up
+        if (
+            !result.accessToken &&
+            cached?.refreshToken &&
+            envToken &&
+            cached.refreshToken !== envToken
+        ) {
+            result = await doRefresh(redis, envToken)
+        }
+        if (!result.accessToken) {
+            // Both tokens dead — needs manual re-auth. Back off so every
+            // page render doesn't hammer Spotify's token endpoint.
+            await redis.set(REFRESH_BACKOFF_KEY, '1', { ex: 60 })
+        }
+        return result
     } finally {
-        refreshLock = null
+        await redis.del(TOKEN_LOCK_KEY)
+    }
+}
+
+const getAccessToken = async (): Promise<string> => {
+    if (memToken && Date.now() < memToken.expiresAt) {
+        return memToken.accessToken
+    }
+    if (tokenInFlight) return tokenInFlight
+
+    tokenInFlight = (async () => {
+        const redis = await getRedis()
+        const cached = (await redis.get(TOKEN_KEY)) as CachedToken | null
+        if (cached && Date.now() < cached.expiresAt) {
+            memToken = cached
+            return cached.accessToken
+        }
+        try {
+            const result = await refreshWithLock(redis)
+            if (result.accessToken) memToken = result
+            return result.accessToken
+        } catch (e) {
+            console.error('[Spotify] Token refresh failed:', e)
+            return ''
+        }
+    })()
+    try {
+        return await tokenInFlight
+    } finally {
+        tokenInFlight = null
+    }
+}
+
+// On failure, fall back to the last successful payload stored in Redis so a
+// transient token/API hiccup never blanks out a section
+const lastGood = async <T>(url: string): Promise<T | null> => {
+    try {
+        const redis = await getRedis()
+        const data = (await redis.get(`spotify_data:${url}`)) as T | null
+        if (data) console.error('[Spotify] serving last-good data for:', url)
+        return data
+    } catch {
+        return null
     }
 }
 
 const spotifyFetch = async <T>(url: string): Promise<T | null> => {
     try {
         const accessToken = await getAccessToken()
-        if (!accessToken) return null
+        if (!accessToken) return lastGood<T>(url)
         const res = await fetchWithTimeout(url, {
             headers: { Authorization: `Bearer ${accessToken}` },
             next: { revalidate: 60 },
         })
         if (!res.ok) {
             console.error('[Spotify] fetch failed:', url, res.status)
-            return null
+            return lastGood<T>(url)
         }
-        return (await res.json()) as T
+        const data = (await res.json()) as T
+        if (data) {
+            // A failed cache write shouldn't fail the render
+            try {
+                const redis = await getRedis()
+                await redis.set(`spotify_data:${url}`, JSON.stringify(data))
+            } catch {}
+        }
+        return data
     } catch (e) {
         console.error('[Spotify] fetch error:', url, e)
-        return null
+        return lastGood<T>(url)
     }
 }
 
