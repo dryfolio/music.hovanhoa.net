@@ -4,7 +4,6 @@ import { GeistMono } from 'geist/font/mono'
 import './globals.css'
 import { BASE_URL, NAME, FULL_NAME, ROLE, IMAGE, TWITTER } from '@/constants'
 import { Analytics } from '@vercel/analytics/react'
-import ScrollToTop from '@/components/scroll-to-top'
 
 export const metadata: Metadata = {
     metadataBase: new URL(BASE_URL),
@@ -80,7 +79,6 @@ export default function RootLayout({
                     }}
                 />
                 {children}
-                <ScrollToTop />
             </body>
             <Analytics />
         </html>
