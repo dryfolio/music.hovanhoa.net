@@ -11,6 +11,7 @@ const SPOTIFY_PROFILE_URL =
     'https://open.spotify.com/user/31hrewf6b5arny7zcys55uevsqoq'
 const INSIGHT_URL = 'https://insight.hovanhoa.net'
 const GALLERY_URL = 'https://gallery.hovanhoa.net'
+const STATUS_URL = 'https://status.hovanhoa.net'
 const ROLE = 'Software Engineer'
 
 export {
@@ -24,6 +25,7 @@ export {
     SPOTIFY_PROFILE_URL,
     INSIGHT_URL,
     GALLERY_URL,
+    STATUS_URL,
     INFO_URL,
     BASE_URL,
     ROLE,
