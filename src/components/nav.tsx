@@ -18,6 +18,7 @@ import {
 } from '@remixicon/react'
 import {
     BASE_URL,
+    BLOG_URL,
     BOOK_URL,
     GALLERY_URL,
     GITHUB,
@@ -46,22 +47,30 @@ const COLUMNS: Column[] = [
         title: 'this site',
         items: [
             {
-                label: 'home',
-                desc: 'profile & writing',
-                href: BASE_URL,
-                icon: RiHome5Line,
-            },
-            {
-                label: 'blog',
-                desc: 'notes & posts',
-                href: `${BASE_URL}/#blog`,
-                icon: RiBookOpenLine,
+                label: 'music',
+                desc: "what's on repeat",
+                href: MUSIC_URL,
+                icon: RiMusic2Line,
             },
         ],
     },
     {
         title: 'the family',
         items: [
+            {
+                label: 'home',
+                desc: 'profile & writing',
+                href: BASE_URL,
+                icon: RiHome5Line,
+                external: true,
+            },
+            {
+                label: 'blog',
+                desc: 'notes & posts',
+                href: BLOG_URL,
+                icon: RiBookOpenLine,
+                external: true,
+            },
             {
                 label: 'insight',
                 desc: 'coding activity',
@@ -74,13 +83,6 @@ const COLUMNS: Column[] = [
                 desc: 'photography',
                 href: GALLERY_URL,
                 icon: RiImageLine,
-                external: true,
-            },
-            {
-                label: 'music',
-                desc: "what's on repeat",
-                href: MUSIC_URL,
-                icon: RiMusic2Line,
                 external: true,
             },
             {
@@ -295,11 +297,20 @@ export default function Navbar() {
                     <a href={BASE_URL} className={linkClass}>
                         home
                     </a>
+                    <a href={BLOG_URL} className={linkClass}>
+                        blog
+                    </a>
                     <a href={INSIGHT_URL} className={linkClass}>
                         insight
                     </a>
-                    <a href={GALLERY_URL} className={linkClass}>
+                    <a href={GALLERY_URL} className={`${linkClass} hidden lg:inline`}>
                         gallery
+                    </a>
+                    <a href={BOOK_URL} className={`${linkClass} hidden lg:inline`}>
+                        book
+                    </a>
+                    <a href={STATUS_URL} className={`${linkClass} hidden xl:inline`}>
+                        status
                     </a>
                 </div>
             </div>

@@ -1,6 +1,7 @@
 const NAME = 'hovanhoa'
 const FULL_NAME = 'Hồ Văn Hòa'
 const BASE_URL = 'https://hovanhoa.net'
+const BLOG_URL = 'https://blog.hovanhoa.net'
 const TWITTER = '_hovanhoa_'
 const LINKEDIN = 'hovanhoa'
 const GITHUB = 'hovanhoa'
@@ -22,6 +23,7 @@ export {
     LINKEDIN,
     GITHUB,
     IMAGE,
+    BLOG_URL,
     MUSIC_URL,
     SPOTIFY_PROFILE_URL,
     INSIGHT_URL,
