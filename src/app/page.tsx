@@ -1,5 +1,3 @@
-import Navbar from '@/components/nav'
-import { Footer } from '@/components/footer'
 import { Metadata } from 'next'
 import {
     BASE_URL,
@@ -14,8 +12,18 @@ import { RecentlyPlayed } from './spotify/recently-played'
 import { TopTracks } from './spotify/top-tracks'
 import { TopArtists } from './spotify/top-artists'
 import { Profile } from './spotify/profile'
-import { SkeletonCard } from '@/components/skeleton-card'
-import { Eyebrow } from '@/components/redesign/eyebrow'
+import {
+    SkeletonFeatured,
+    SkeletonGrid,
+    SkeletonInline,
+    SkeletonList,
+} from '@/components/skeleton-card'
+import { SectionHead } from '@/components/section-head'
+
+const SECTION =
+    'mx-auto max-w-[var(--rd-maxw)] px-[var(--rd-pad)] py-[clamp(48px,6vw,80px)]'
+
+const spotifyLink = [{ label: 'Open on Spotify', href: SPOTIFY_PROFILE_URL }]
 
 export const metadata: Metadata = {
     title: `${NAME} | music`,
@@ -56,58 +64,66 @@ export const revalidate = 60
 
 export default async function Music() {
     return (
-        <main className="min-h-screen relative">
-            {/* sticky header */}
-            <header className="sticky top-0 z-50 border-b border-[var(--rd-border-2)] bg-[var(--rd-bg-sub)] shadow-[0_1px_3px_rgba(0,0,0,0.03)]">
-                <div className="mx-auto w-full max-w-[var(--rd-maxw)] px-[var(--rd-pad)] py-3">
-                    <Navbar />
-                </div>
-            </header>
-            {/* header panel — matches the footer treatment */}
-            <div
-                className="border-b border-[var(--rd-border)]"
-                style={{
-                    background:
-                        'radial-gradient(100% 140% at 0% 0%, var(--rd-accent-bg), transparent 55%), var(--rd-surface-2)',
-                }}
-            >
-                <div className="mx-auto max-w-[var(--rd-maxw)] px-[var(--rd-pad)] pt-12 pb-12">
-                    <Eyebrow>hovanhoa · music</Eyebrow>
-                    <h1 className="mt-[18px] text-[clamp(2rem,4.6vw,3.4rem)] font-semibold tracking-[-0.04em] text-[var(--rd-text)]">
-                        my music library
+        <main className="relative min-h-screen bg-[var(--rd-bg)] text-[var(--rd-text)]">
+            <section className="mx-auto w-full max-w-[var(--rd-maxw)] px-[var(--rd-pad)] pb-[clamp(1rem,3vw,2rem)] pt-[clamp(3.5rem,8vw,6.5rem)]">
+                <div className="rd-rise min-w-0 max-w-[46rem]">
+                    <h1 className="m-0 flex flex-col gap-3">
+                        <span className="rd-display text-[var(--rd-text)]">
+                            Music
+                        </span>
+                        <span className="text-pretty text-[clamp(1.08rem,1.7vw,1.28rem)] font-medium leading-[1.35] tracking-[-0.02em] text-[var(--rd-text-2)]">
+                            What I&apos;ve been listening to lately.
+                        </span>
                     </h1>
-                    <p className="rd-lead mt-5">
-                        what i&apos;ve been listening to, powered by{' '}
+                    <p className="m-0 mt-[clamp(1.1rem,2vw,1.5rem)] max-w-[56ch] text-[clamp(0.98rem,1.25vw,1.0625rem)] leading-[1.65] text-[var(--rd-text-2)]">
+                        Recent plays, top tracks and the artists I keep coming
+                        back to, pulled live from{' '}
                         <a
                             href={SPOTIFY_PROFILE_URL}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-emerald-500 hover:text-emerald-600 transition-colors font-medium"
+                            className="font-medium text-[var(--rd-text)] underline decoration-[color-mix(in_srgb,var(--rd-accent)_40%,transparent)] underline-offset-2 transition-colors hover:decoration-[var(--rd-accent)]"
                         >
-                            spotify
-                        </a>
-                        .
+                            Spotify
+                        </a>{' '}
+                        and refreshed every minute.
                     </p>
+                    <div className="mt-[clamp(1.2rem,2.2vw,1.7rem)]">
+                        <Suspense fallback={<SkeletonInline />}>
+                            <Profile />
+                        </Suspense>
+                    </div>
                 </div>
-            </div>
-            {/* body */}
-            <div className="mx-auto max-w-[var(--rd-maxw)] px-[var(--rd-pad)] pt-14">
-                <div className="space-y-8 sm:space-y-10">
-                    <Suspense fallback={<SkeletonCard />}>
-                        <Profile />
-                    </Suspense>
-                    <Suspense fallback={<SkeletonCard />}>
-                        <RecentlyPlayed />
-                    </Suspense>
-                    <Suspense fallback={<SkeletonCard />}>
-                        <TopTracks />
-                    </Suspense>
-                    <Suspense fallback={<SkeletonCard />}>
-                        <TopArtists />
-                    </Suspense>
-                </div>
-            </div>
-            <Footer />
+            </section>
+
+            <section className={SECTION}>
+                <SectionHead title="Recently played" links={spotifyLink} />
+                <Suspense fallback={<SkeletonFeatured />}>
+                    <RecentlyPlayed />
+                </Suspense>
+            </section>
+
+            <section className={SECTION}>
+                <SectionHead title="Top tracks">
+                    <p className="m-0 mt-2 max-w-[58ch] text-[0.95rem] leading-[1.6] text-[var(--rd-text-2)]">
+                        Most played over the last four weeks.
+                    </p>
+                </SectionHead>
+                <Suspense fallback={<SkeletonList rows={8} />}>
+                    <TopTracks />
+                </Suspense>
+            </section>
+
+            <section className={SECTION}>
+                <SectionHead title="Top artists">
+                    <p className="m-0 mt-2 max-w-[58ch] text-[0.95rem] leading-[1.6] text-[var(--rd-text-2)]">
+                        Who has been on rotation over the same stretch.
+                    </p>
+                </SectionHead>
+                <Suspense fallback={<SkeletonGrid />}>
+                    <TopArtists />
+                </Suspense>
+            </section>
         </main>
     )
 }

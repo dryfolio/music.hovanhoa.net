@@ -1,59 +1,44 @@
-import { getTopArtists, type TopArtist } from '@/lib/spotify'
+import { getTopArtists } from '@/lib/spotify'
 import Image from 'next/image'
-import { Eyebrow } from '@/components/redesign/eyebrow'
+import { EmptyState } from '@/components/skeleton-card'
 
 export async function TopArtists() {
     const artists = await getTopArtists()
 
+    if (!artists || artists.length === 0) return <EmptyState />
+
     return (
-        <div>
-            <div className="mb-4">
-                <Eyebrow>top artists</Eyebrow>
-            </div>
-            {(!artists || artists.length === 0) && (
-                <p className="text-[var(--rd-text-3)] text-sm mt-2">
-                    couldn&apos;t load right now — try refreshing.
-                </p>
-            )}
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                {artists.map((artist: TopArtist) => (
+        <ol className="m-0 grid list-none grid-cols-3 gap-x-4 gap-y-6 p-0 sm:grid-cols-4 lg:grid-cols-6">
+            {artists.map((artist, i) => (
+                <li key={artist.id} className="min-w-0">
                     <a
-                        key={artist.id}
                         href={artist.external_urls.spotify}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="group block relative overflow-hidden rounded-[var(--rd-r)] border border-[var(--rd-border)] aspect-[4/3]"
+                        className="group flex flex-col gap-2.5"
                     >
-                        <Image
-                            src={artist.images[0]?.url ?? ''}
-                            alt={artist.name}
-                            fill
-                            loading="lazy"
-                            decoding="async"
-                            className="object-cover w-full h-full transition-transform duration-500 group-hover:scale-110"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent opacity-80 group-hover:opacity-100 transition-opacity" />
-                        <div className="absolute inset-0 p-4 flex flex-col justify-end">
-                            <h3 className="text-lg sm:text-xl font-bold text-white drop-shadow-sm line-clamp-1">
-                                {artist.name}
-                            </h3>
-                            {artist.popularity != null && (
-                                <div className="flex items-center gap-1 text-xs text-zinc-300">
-                                    <svg
-                                        xmlns="http://www.w3.org/2000/svg"
-                                        className="w-4 h-4"
-                                        viewBox="0 0 20 20"
-                                        fill="currentColor"
-                                    >
-                                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                                    </svg>
-                                    <span>{artist.popularity}%</span>
-                                </div>
+                        <span className="relative block aspect-square w-full overflow-hidden rounded-[var(--rd-r)] border border-[var(--rd-border)] bg-[var(--rd-bg-sub)]">
+                            {artist.images[0]?.url && (
+                                <Image
+                                    src={artist.images[0].url}
+                                    alt=""
+                                    fill
+                                    sizes="(min-width: 1024px) 170px, (min-width: 640px) 25vw, 33vw"
+                                    className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+                                />
                             )}
-                        </div>
+                        </span>
+                        <span className="flex min-w-0 items-baseline gap-2">
+                            <span className="hidden shrink-0 font-[family-name:var(--font-mono)] text-[0.72rem] tabular-nums text-[var(--rd-text-3)] sm:inline">
+                                {String(i + 1).padStart(2, '0')}
+                            </span>
+                            <span className="truncate text-[0.9rem] font-medium tracking-[-0.02em] text-[var(--rd-text)] transition-colors group-hover:text-[var(--rd-accent-ink)]">
+                                {artist.name}
+                            </span>
+                        </span>
                     </a>
-                ))}
-            </div>
-        </div>
+                </li>
+            ))}
+        </ol>
     )
 }
