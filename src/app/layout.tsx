@@ -4,6 +4,13 @@ import { GeistMono } from 'geist/font/mono'
 import './globals.css'
 import { BASE_URL, NAME, FULL_NAME, ROLE, IMAGE, TWITTER } from '@/constants'
 import { Analytics } from '@vercel/analytics/react'
+import Navbar from '@/components/nav'
+import { Footer } from '@/components/footer'
+
+// serif display face for headings — non-blocking stylesheet; Geist itself
+// comes from next/font above
+const DISPLAY_FONTS =
+    'https://fonts.googleapis.com/css2?family=Libertinus+Serif:ital,wght@0,400;0,600;1,400&family=Noto+Serif:ital,wght@0,400;0,600;1,400&display=swap'
 
 export const metadata: Metadata = {
     metadataBase: new URL(BASE_URL),
@@ -70,15 +77,26 @@ export default function RootLayout({
     return (
         <html
             lang="en"
-            className={`scroll-smooth ${GeistSans.variable} ${GeistMono.variable}`}
+            className={`motion-safe:scroll-smooth ${GeistSans.variable} ${GeistMono.variable}`}
         >
+            <head>
+                <link rel="preconnect" href="https://fonts.googleapis.com" />
+                <link
+                    rel="preconnect"
+                    href="https://fonts.gstatic.com"
+                    crossOrigin="anonymous"
+                />
+                <link rel="stylesheet" href={DISPLAY_FONTS} />
+            </head>
             <body className={GeistSans.className}>
                 <script
                     dangerouslySetInnerHTML={{
                         __html: `(function(){try{var m=document.cookie.match(/(?:^|; )theme=(dark|light)/);if(m&&m[1]==='dark')document.documentElement.classList.add('dark')}catch(e){}})()`,
                     }}
                 />
+                <Navbar />
                 {children}
+                <Footer />
             </body>
             <Analytics />
         </html>

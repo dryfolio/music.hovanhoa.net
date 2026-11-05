@@ -1,71 +1,77 @@
 import { getRecentlyPlayed, type RecentlyPlayedTrack } from '@/lib/spotify'
-import { formatDistanceToNow } from 'date-fns'
+import { formatDistanceToNowStrict } from 'date-fns'
 import Image from 'next/image'
-import { Eyebrow } from '@/components/redesign/eyebrow'
+import { EmptyState, card } from '@/components/skeleton-card'
+import { TrackRow, artists } from './track-row'
 
-export async function RecentlyPlayed() {
-    const tracks = await getRecentlyPlayed()
+const ago = (iso: string) =>
+    formatDistanceToNowStrict(new Date(iso), { addSuffix: true })
 
+function FeaturedTrack({ track }: { track: RecentlyPlayedTrack }) {
     return (
-        <div>
-            <div className="mb-4">
-                <Eyebrow>recently played</Eyebrow>
+        <article
+            className={`${card} group relative flex gap-[clamp(1rem,2.5vw,1.5rem)] p-[1.15rem] max-[560px]:flex-col`}
+        >
+            <div className="relative aspect-square w-[clamp(8rem,22vw,13.5rem)] shrink-0 overflow-hidden rounded-[var(--rd-r)] border border-[var(--rd-border)] bg-[var(--rd-bg-sub)]">
+                {track.imageUrl && (
+                    <Image
+                        src={track.imageUrl}
+                        alt=""
+                        fill
+                        sizes="216px"
+                        className="object-cover transition-transform duration-500 group-hover:scale-[1.02]"
+                    />
+                )}
             </div>
-            {(!tracks || tracks.length === 0) && (
-                <p className="text-[var(--rd-text-3)] text-sm mt-2">
-                    couldn&apos;t load right now — try refreshing.
-                </p>
-            )}
-            <div className="space-y-2">
-                {tracks.map((track: RecentlyPlayedTrack) => (
+            <div className="flex min-w-0 flex-1 flex-col gap-2 min-[561px]:pt-1">
+                <span className="font-[family-name:var(--font-mono)] text-[0.72rem] text-[var(--rd-text-3)]">
+                    Last played · {ago(track.played_at)}
+                </span>
+                <h3 className="m-0 font-[family-name:var(--font-display)] text-[clamp(1.35rem,2.4vw,1.8rem)] font-normal leading-[1.15] tracking-[-0.03em] text-[var(--rd-text)] transition-colors group-hover:text-[var(--rd-accent-ink)]">
                     <a
-                        key={track.id}
                         href={track.songUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="rd-card group flex items-center gap-3 p-2 transition-all duration-200 hover:border-[var(--rd-border-2)]"
+                        className="after:absolute after:inset-0 after:content-['']"
                     >
-                        <div className="relative w-12 h-12 sm:w-16 sm:h-16 flex-shrink-0">
-                            <Image
-                                src={track.imageUrl}
-                                alt={track.title}
-                                width={64}
-                                height={64}
-                                loading="lazy"
-                                decoding="async"
-                                className="rounded-lg object-cover w-full h-full"
-                            />
-                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 rounded-lg flex items-center justify-center transition-all duration-200">
-                                <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    viewBox="0 0 24 24"
-                                    fill="currentColor"
-                                    className="w-5 h-5 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                                >
-                                    <path d="M4.5 5.653c0-1.426 1.529-2.33 2.779-1.643l11.54 6.348c1.295.712 1.295 2.573 0 3.285L7.28 19.991c-1.25.687-2.779-.217-2.779-1.643V5.653z" />
-                                </svg>
-                            </div>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                            <h3 className="font-medium text-sm sm:text-base text-[var(--rd-text)] group-hover:text-[var(--rd-accent-ink)] transition-colors line-clamp-1">
-                                {track.title}
-                            </h3>
-                            <p className="text-[var(--rd-text-2)] text-xs sm:text-sm line-clamp-1">
-                                {track.artist.map((a) => a.name).join(', ')}
-                            </p>
-                            <p className="text-[var(--rd-text-3)] text-xs mt-0.5">
-                                Played{' '}
-                                {formatDistanceToNow(
-                                    new Date(track.played_at),
-                                    {
-                                        addSuffix: true,
-                                    }
-                                )}
-                            </p>
-                        </div>
+                        {track.title}
                     </a>
-                ))}
+                </h3>
+                <p className="m-0 text-[0.95rem] leading-[1.45] text-[var(--rd-text-2)]">
+                    {artists(track.artist)}
+                </p>
+                <span className="mt-auto inline-flex items-center gap-1 pt-3 text-[0.875rem] text-[var(--rd-text-2)] transition-colors group-hover:text-[var(--rd-text)]">
+                    Listen on Spotify <span aria-hidden>→</span>
+                </span>
             </div>
+        </article>
+    )
+}
+
+export async function RecentlyPlayed() {
+    const tracks = await getRecentlyPlayed()
+    const [latest, ...rest] = tracks ?? []
+
+    if (!latest) return <EmptyState />
+
+    // desktop: latest play as a featured block, earlier plays as rows
+    return (
+        <div className="grid items-start gap-x-8 gap-y-4 min-[900px]:grid-cols-[minmax(0,1.2fr)_minmax(0,0.9fr)]">
+            <FeaturedTrack track={latest} />
+            {rest.length > 0 && (
+                <div className={card}>
+                    {rest.map((track) => (
+                        <TrackRow
+                            key={`${track.id}-${track.played_at}`}
+                            href={track.songUrl}
+                            title={track.title}
+                            artist={artists(track.artist)}
+                            imageUrl={track.imageUrl}
+                            meta={ago(track.played_at)}
+                        />
+                    ))}
+                </div>
+            )}
         </div>
     )
 }
