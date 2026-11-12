@@ -1,4 +1,7 @@
-import { getRecentlyPlayed, type RecentlyPlayedTrack } from '@/lib/spotify'
+'use client'
+
+import { type RecentlyPlayedTrack } from '@/lib/spotify'
+import { useSpotify } from './live-data'
 import { formatDistanceToNowStrict } from 'date-fns'
 import Image from 'next/image'
 import { EmptyState, card } from '@/components/skeleton-card'
@@ -24,7 +27,10 @@ function FeaturedTrack({ track }: { track: RecentlyPlayedTrack }) {
                 )}
             </div>
             <div className="flex min-w-0 flex-1 flex-col gap-2 min-[561px]:pt-1">
-                <span className="font-[family-name:var(--font-mono)] text-[0.72rem] text-[var(--rd-text-3)]">
+                <span
+                    suppressHydrationWarning
+                    className="font-[family-name:var(--font-mono)] text-[0.72rem] text-[var(--rd-text-3)]"
+                >
                     Last played · {ago(track.played_at)}
                 </span>
                 <h3 className="m-0 font-[family-name:var(--font-display)] text-[clamp(1.35rem,2.4vw,1.8rem)] font-normal leading-[1.15] tracking-[-0.03em] text-[var(--rd-text)] transition-colors group-hover:text-[var(--rd-accent-ink)]">
@@ -48,8 +54,8 @@ function FeaturedTrack({ track }: { track: RecentlyPlayedTrack }) {
     )
 }
 
-export async function RecentlyPlayed() {
-    const tracks = await getRecentlyPlayed()
+export function RecentlyPlayed() {
+    const { recentlyPlayed: tracks } = useSpotify()
     const [latest, ...rest] = tracks ?? []
 
     if (!latest) return <EmptyState />

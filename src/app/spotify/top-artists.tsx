@@ -1,9 +1,11 @@
-import { getTopArtists } from '@/lib/spotify'
+'use client'
+
+import { useSpotify } from './live-data'
 import Image from 'next/image'
 import { EmptyState } from '@/components/skeleton-card'
 
-export async function TopArtists() {
-    const artists = await getTopArtists()
+export function TopArtists() {
+    const { topArtists: artists } = useSpotify()
 
     if (!artists || artists.length === 0) return <EmptyState />
 

@@ -1,9 +1,11 @@
-import { getTopTracks } from '@/lib/spotify'
+'use client'
+
+import { useSpotify } from './live-data'
 import { EmptyState, card } from '@/components/skeleton-card'
 import { TrackRow, artists } from './track-row'
 
-export async function TopTracks() {
-    const tracks = await getTopTracks()
+export function TopTracks() {
+    const { topTracks: tracks } = useSpotify()
 
     if (!tracks || tracks.length === 0) return <EmptyState />
 
