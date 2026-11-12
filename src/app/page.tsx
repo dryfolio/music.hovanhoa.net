@@ -60,7 +60,9 @@ export const metadata: Metadata = {
     },
 }
 
-export const revalidate = 60
+// Spotify data is fetched once at build time (static export); rebuild to
+// refresh it.
+export const dynamic = 'force-static'
 
 export default async function Music() {
     return (
