@@ -345,7 +345,27 @@ const getTopArtists = async (): Promise<TopArtist[]> => {
     return data?.items ?? []
 }
 
+export interface SpotifyData {
+    profile: SpotifyProfile | null
+    recentlyPlayed: RecentlyPlayedTrack[]
+    topTracks: TopTrack[]
+    topArtists: TopArtist[]
+}
+
+// Everything the page renders, in one payload: used for the build-time render
+// and by the /api/spotify Worker (worker/index.ts) the browser polls.
+const getSpotifyData = async (): Promise<SpotifyData> => {
+    const [profile, recentlyPlayed, topTracks, topArtists] = await Promise.all([
+        getProfile(),
+        getRecentlyPlayed(),
+        getTopTracks(),
+        getTopArtists(),
+    ])
+    return { profile, recentlyPlayed, topTracks, topArtists }
+}
+
 export {
+    getSpotifyData,
     getNowPlaying,
     getTopTracks,
     getRecentlyPlayed,

@@ -1,4 +1,6 @@
-import { getProfile } from '@/lib/spotify'
+'use client'
+
+import { useSpotify } from './live-data'
 import Image from 'next/image'
 
 export function SpotifyMark({ className = '' }: { className?: string }) {
@@ -16,8 +18,8 @@ export function SpotifyMark({ className = '' }: { className?: string }) {
 }
 
 // Profile — a quiet byline under the page title: avatar, name, followers.
-export async function Profile() {
-    const profile = await getProfile()
+export function Profile() {
+    const { profile } = useSpotify()
 
     if (!profile || !profile.id) {
         return null

@@ -52,7 +52,11 @@ export function TrackRow({
                 </span>
             </span>
             {meta && (
-                <span className="shrink-0 font-[family-name:var(--font-mono)] text-[0.72rem] text-[var(--rd-text-3)]">
+                // relative times ("3 min ago") differ between build and load
+                <span
+                    suppressHydrationWarning
+                    className="shrink-0 font-[family-name:var(--font-mono)] text-[0.72rem] text-[var(--rd-text-3)]"
+                >
                     {meta}
                 </span>
             )}
