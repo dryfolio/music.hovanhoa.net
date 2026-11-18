@@ -14,6 +14,7 @@ const INSIGHT_URL = 'https://insight.hovanhoa.net'
 const GALLERY_URL = 'https://gallery.hovanhoa.net'
 const STATUS_URL = 'https://status.hovanhoa.net'
 const BOOK_URL = 'https://book.hovanhoa.net'
+const MOVIE_URL = 'https://movie.hovanhoa.net'
 const ROLE = 'Software Engineer'
 
 export {
@@ -31,6 +32,7 @@ export {
     STATUS_URL,
     INFO_URL,
     BOOK_URL,
+    MOVIE_URL,
     BASE_URL,
     ROLE,
 }
